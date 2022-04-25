@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -22,89 +21,47 @@ func Constructor() Codec {
 // Serializes a tree to a single string.
 func (this *Codec) serialize(root *TreeNode) string {
 	seq := []string{}
-	curr := 1
-	if root != nil {
-		seq = append(seq, strconv.Itoa(root.Val))
-	}
-	fmt.Println(seq)
-
-	var recur func(*TreeNode, int)
-	recur = func(root *TreeNode, depth int) {
-		// 直到depth這層，應該有多少個元素，第0層1個，第1層3個...
-		totals := (1 << (depth + 1)) - 1
-		if len(seq) != totals {
-			for i := len(seq); i < totals; i++ {
-				seq = append(seq, "nil")
-			}
-		}
+	var dfs func(*TreeNode)
+	dfs = func(root *TreeNode) {
 		if root == nil {
-			curr++
+			seq = append(seq, "nil")
 			return
 		}
-
-		if root.Left != nil {
-			seq[(curr)*2-1] = strconv.Itoa(root.Left.Val)
-		}
-		if root.Right != nil {
-			seq[(curr)*2] = strconv.Itoa(root.Right.Val)
-		}
-		curr++
-
-		recur(root.Left, depth+1)
-		recur(root.Right, depth+1)
+		val := strconv.Itoa(root.Val)
+		seq = append(seq, val)
+		dfs(root.Left)
+		dfs(root.Right)
 	}
-	recur(root, 1)
-	fmt.Println(seq)
+	dfs(root)
 	return strings.Join(seq, ",")
 }
 
 // Deserializes your encoded data to tree.
 func (this *Codec) deserialize(data string) *TreeNode {
-	fmt.Println(data)
+	curr := 0
 	values := strings.Split(data, ",")
-	if values[0] == "nil" {
-		return nil
-	}
-	val, err := strconv.Atoi(values[0])
-	if err != nil {
-		panic(err)
-	}
-	root := &TreeNode{val, nil, nil}
 
-	treeMap := map[int]*TreeNode{0: root}
-	// 只需遍歷到totals/2
-	for i := 1; i <= len(values)/2; i++ {
-		parent := treeMap[(i+1)/2-1]
-		if parent == nil {
-			continue
+	var recur func() *TreeNode
+	recur = func() *TreeNode {
+		value := values[curr]
+		if value == "nil" {
+			curr++
+			return nil
 		}
+		intval, err := strconv.Atoi(value)
+		if err != nil {
+			panic(err)
+		}
+		curr++
 
-		var node *TreeNode
-		if values[i] != "nil" {
-			val, err := strconv.Atoi(values[i])
-			if err != nil {
-				panic(err)
-			}
-			node = &TreeNode{val, nil, nil}
-		}
+		root := new(TreeNode)
+		root.Val = intval
+		root.Left = recur()
+		root.Right = recur()
 
-		// 左子樹正好可被2整除
-		if (i+1)%2 == 0 {
-			parent.Left = node
-		} else {
-			parent.Right = node
-		}
-		treeMap[i] = node
+		return root
 	}
-
-	for i, tree := range treeMap {
-		if tree == nil {
-			fmt.Printf("i=%d, v=nil\n", i)
-		} else {
-			fmt.Printf("i=%d, v=%v\n", i, tree.Val)
-		}
-	}
-	return root
+	return recur()
 }
 
 /**
